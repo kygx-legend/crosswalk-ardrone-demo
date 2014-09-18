@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="xwalk-ardrone-demo-extension" default="dist">
+  <!-- Java source -->
+  <property name="src" value="java" />
+
+  <!-- downloaded third party libraries -->
+  <property name="lib" value="lib" />
+
+  <!-- Environment Variable -->
+  <property environment="env"/>
+
+  <!-- Android API Level -->
+  <property name="android-api-level" value="19" />
+
+  <!-- Crosswalk Android version -->
+  <property name="crosswalk-version" value="9.38.208.0" />
+
+  <!-- location of downloaded Crosswalk Android file -->
+  <property name="crosswalk-zip" value="${lib}/crosswalk.zip" />
+
+  <!-- temporary build directory -->
+  <property name="build" value="build" />
+
+  <!-- final location for the built extension -->
+  <property name="dist" value="xwalk-ardrone-demo-extension" />
+
+  <!-- delete + make the temporary build directories -->
+  <target name="prepare">
+    <delete dir="${build}" quiet="true" />
+    <delete dir="${dist}" quiet="true" />
+
+    <mkdir dir="${build}" />
+    <mkdir dir="${lib}" />
+    <mkdir dir="${dist}" />
+  </target>
+
+  <!-- check whether the Crosswalk zip file is present -->
+  <target name="check-crosswalk-present" depends="prepare">
+    <available file="${crosswalk-zip}" property="crosswalk-zip.present"/>
+  </target>
+
+  <!-- manually get crosswalk.zip if it's not already there -->
+  <target name="download-crosswalk" depends="prepare, check-crosswalk-present"
+          unless="crosswalk-zip.present">
+    <!-- fetch from the download site -->
+    <get src="https://download.01.org/crosswalk/releases/crosswalk/android/canary/${crosswalk-version}/crosswalk-${crosswalk-version}.zip" dest="${crosswalk-zip}" />
+
+    <!-- unpack to lib/crosswalk-*/ -->
+    <unzip src="${crosswalk-zip}" dest="${lib}" />
+  </target>
+
+  <!-- compile the extension Java code -->
+  <target name="compile" depends="download-crosswalk">
+    <fail unless="env.ANDROID_SDK_HOME">ANDROID_SDK_HOME must be set</fail>
+    <javac srcdir="${src}" destdir="${build}"
+           encoding="utf-8" debug="true" verbose="true">
+      <classpath>
+        <fileset dir="${lib}" includes="*.jar" />
+        <file file="${lib}/crosswalk-${crosswalk-version}/template/libs/xwalk_app_runtime_java.jar" />
+        <file file="${lib}/crosswalk-${crosswalk-version}/xwalk_core_library/libs/xwalk_core_library_java.jar" />
+        <file file="${env.ANDROID_SDK_HOME}/platforms/android-${android-api-level}/android.jar" />
+      </classpath>
+    </javac>
+  </target>
+
+  <!--
+  pack third party Java code and extension code into a single
+  jar, and copy supporting files to the xwalk-echo-extension/
+  directory; NB we don't need to pack any Crosswalk jars, as they
+  will be added by the packaging tool; and we don't need android.jar,
+  as that is on the Android target already
+  -->
+  <target name="dist" depends="compile">
+    <unjar dest="${build}">
+      <fileset dir="${lib}">
+        <include name="*.jar" />
+      </fileset>
+    </unjar>
+
+    <jar destfile="${dist}/xwalk-ardrone-demo-extension.jar">
+      <fileset dir="${build}" excludes="META-INF/**" />
+    </jar>
+
+    <copy file="xwalk-ardrone-demo-extension.json" todir="${dist}" />
+    <copy file="js/xwalk-ardrone-demo-extension.js" todir="${dist}" />
+  </target>
+</project>

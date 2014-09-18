@@ -1,0 +1,5 @@
+{
+  "name":  "ardrone",
+  "class": "org.crosswalkproject.ardrone.ARDrone",
+  "jsapi": "xwalk-ardrone-demo-extension.js"
+}
