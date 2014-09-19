@@ -27,10 +27,14 @@ public class ATCommand implements Comparable<ATCommand> {
      *      7. FTRIM -- new ATCommand(new FtrimCommand());
      *      8. LED -- new ATCommand(new LedCommand(INT_ANIMATION, FLOAT_FREQUENCY, INT_DURATION));
      *      9. COMWDG -- new ATCommand(new ComwdgCommand());
-     *      10. PCWD_HOVER -- new ATCommand(new HoverCommand());
-     *      11. PCWD_MOVE -- new ATCommand(new MoveCommand(BOOL_YAW_ENABLE, FLOAT_LEFTRIHTTILT,
+     *      10. PCMD_HOVER -- new ATCommand(new HoverCommand());
+     *      11. PCMD_MOVE -- new ATCommand(new MoveCommand(BOOL_YAW_ENABLE, FLOAT_LEFTRIHTTILT,
      *                                     FLOAT_FRONTBACKTILT, FLOAT_VERTICALSPEED, FLOAT_ANGULARSPEED));
-     *      12. QUIT -- new ATCommand(new QuitCommand());
+     *      12. PMODE -- new ATCommand(new PmodeCommand(INT_PMODE));
+     *      13. MISC -- new ATCommand(new MiscCommand(INT_MISC[4]));
+     *      14. CTRL -- new ATCommand(new CtrlCommand(INT_CONTROL_MODE));
+     *      15. CONFIG_IDS -- new ATCommand(new ConfigIdsCommand(STRING_SESSION_ID, STRING_PROFILE_ID, STRING_APP_ID));
+     *      16. QUIT -- new ATCommand(new QuitCommand());
      *
      */
     public ATCommand(BaseCommand baseCommand) {
@@ -54,6 +58,14 @@ public class ATCommand implements Comparable<ATCommand> {
             mCommandType = "Hover";
         } else if (baseCommand instanceof MoveCommand) {
             mCommandType = "Move";
+        } else if (baseCommand instanceof PmodeCommand) {
+            mCommandType = "Pmode";
+        } else if (baseCommand instanceof MiscCommand) {
+            mCommandType = "Misc";
+        } else if (baseCommand instanceof CtrlCommand) {
+            mCommandType = "Ctrl";
+        } else if (baseCommand instanceof ConfigIdsCommand) {
+            mCommandType = "ConfigIds";
         } else if (baseCommand instanceof QuitCommand) {
             mCommandType = "Quit";
         } else {
@@ -177,6 +189,24 @@ class ConfigCommand extends BaseCommand {
     }
 }
 
+class ConfigIdsCommand extends BaseCommand {
+    String mSessionId;
+    String mProfileId;
+    String mAppId;
+
+    ConfigIdsCommand(String session, String profile, String app) {
+        super("CONFIG_IDS");
+        mSessionId = session;
+        mProfileId = profile;
+        mAppId = app;
+    }
+
+    @Override
+    Object[] getParameters() {
+        return new Object[] {mSessionId, mProfileId, mAppId};
+    }
+}
+
 class AnimCommand extends BaseCommand {
     int mAnimation;
     int mDuration;
@@ -274,11 +304,68 @@ class ComwdgCommand extends BaseCommand {
 
     @Override
     int getPriority() {
-        return PRIORITY_HIGH;
+        return PRIORITY_VERY_HIGH;
     }
 }
 
-class PcwdCommand extends BaseCommand {
+class PmodeCommand extends BaseCommand {
+    int mPmode;
+
+    PmodeCommand(int pmode) {
+        super("PMODE");
+        mPmode = pmode;
+    }
+
+    @Override
+    int getPriority() {
+        return PRIORITY_HIGH;
+    }
+
+    @Override
+    protected Object[] getParameters() {
+        return new Object[] {mPmode};
+    }
+}
+
+class MiscCommand extends BaseCommand {
+    int[] mMiscValue;
+
+    MiscCommand(int[] miscValue) {
+        super("MISC");
+        mMiscValue = miscValue;
+    }
+
+    @Override
+    int getPriority() {
+        return PRIORITY_HIGH;
+    }
+
+    @Override
+    protected Object[] getParameters() {
+        return new Object[] {mMiscValue[0], mMiscValue[1], mMiscValue[2], mMiscValue[3]};
+    }
+}
+
+class CtrlCommand extends BaseCommand {
+    int mControlMode;
+
+    CtrlCommand(int controlMode) {
+        super("CTRL");
+        mControlMode = controlMode;
+    }
+
+    @Override
+    int getPriority() {
+        return PRIORITY_HIGH;
+    }
+
+    @Override
+    protected Object[] getParameters() {
+        return new Object[] {mControlMode, 0};
+    }
+}
+
+class PcmdCommand extends BaseCommand {
     boolean mCombinedYawEnable;
     boolean mHover;
 
@@ -287,8 +374,8 @@ class PcwdCommand extends BaseCommand {
     float mLeftRrightTilt;
     float mVerticalSpeed;
 
-    PcwdCommand(boolean hover) {
-        super("PCWD");
+    PcmdCommand(boolean hover) {
+        super("PCMD");
         mHover = hover;
     }
 
@@ -308,13 +395,13 @@ class PcwdCommand extends BaseCommand {
     }
 }
 
-class HoverCommand extends PcwdCommand {
+class HoverCommand extends PcmdCommand {
     HoverCommand() {
         super(true);
     }
 }
 
-class MoveCommand extends PcwdCommand {
+class MoveCommand extends PcmdCommand {
     MoveCommand(boolean combinedYawEnable, float leftRightTilt, float frontBackTilt,
             float verticalSpeed, float angularSpeed) {
         super(false);
@@ -325,4 +412,3 @@ class MoveCommand extends PcwdCommand {
         mAngularSpeed = angularSpeed;
     }
 }
-

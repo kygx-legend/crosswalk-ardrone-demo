@@ -114,6 +114,20 @@ exports.yaw_minus = function() {
   return createPromise(msg);
 };
 
+exports.altitude_plus = function() {
+  var msg = {
+    'cmd': 'altitude_plus'
+  };
+  return createPromise(msg);
+};
+
+exports.altitude_minus = function() {
+  var msg = {
+    'cmd': 'altitude_minus'
+  };
+  return createPromise(msg);
+};
+
 extension.setMessageListener(function(json) {
   var msg = JSON.parse(json);
 

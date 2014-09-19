@@ -7,6 +7,7 @@ package org.crosswalkproject.ardrone;
 import android.util.Log;
 
 import java.util.concurrent.PriorityBlockingQueue;
+//import java.util.concurrent.ArrayBlockingQueue;
 
 public class ATCommandQueue {
     private static final String TAG = "ATCommandQueue"; 

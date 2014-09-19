@@ -101,6 +101,18 @@ window.onload = function() {
         onSuccess();
       }, Error);
     };
+    document.getElementById("altitude_plus").onclick = function () {
+      ardrone.altitude_plus().then(function(msg) {
+        document.getElementById('message').innerHTML += enumerateAllProps(msg);
+        onSuccess();
+      }, Error);
+    };
+    document.getElementById("altitude_minus").onclick = function () {
+      ardrone.altitude_minus().then(function(msg) {
+        document.getElementById('message').innerHTML += enumerateAllProps(msg);
+        onSuccess();
+      }, Error);
+    };
   } catch(e) {
     console.log(e);
   }
