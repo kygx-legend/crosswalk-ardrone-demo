@@ -19,18 +19,39 @@ public class ARDrone extends XWalkExtensionClient {
     private static final String TAG = "ARDrone";
 
     private ATCommandManager mATCommandManager;
-    private ATCommandQueue mQueue;
-    private DatagramSocket mDataSocket;
+    private ATCommandQueue mCommandQueue;
     private String mLocalAddress;
     private String mRemoteAddress;
+    private RunnableWithLock mKeepAliveRunnable;
     private Thread mCommandThread;
+    private Thread mKeepAliveThread;
 
     public ARDrone(String name, String jsApiContent, XWalkExtensionContextClient xwalkContext) {
         super(name, jsApiContent, xwalkContext);
-        mQueue = new ATCommandQueue(10);
         mLocalAddress = "192.168.1.2";
         mRemoteAddress = "192.168.1.1";
-        mDataSocket = null;
+        mCommandQueue = new ATCommandQueue(10);
+        mATCommandManager = new ATCommandManager(mCommandQueue, mRemoteAddress);
+        mKeepAliveRunnable = new RunnableWithLock() {
+            @Override
+            public void run() {
+                while (true) {
+                    if (mCommandThread != null) {
+                        mCommandQueue.add(new ATCommand(new ComwdgCommand()));
+                    }
+
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        Log.i(TAG, "KeepAliveThread interruptted!!!");
+                        break;
+                    }
+                    paused();
+                }
+            }
+        };
+        mCommandThread = null;
+        mKeepAliveThread = null;
     }
 
     private void handleMessage(int instanceID, String message) {
@@ -82,126 +103,134 @@ public class ARDrone extends XWalkExtensionClient {
     }
 
     private JSONObject connect() {
-        try {
-            mDataSocket = new DatagramSocket();
-            mATCommandManager = new ATCommandManager(mQueue, mDataSocket, mRemoteAddress);
-            mCommandThread = new Thread(mATCommandManager);
-            mCommandThread.start();
-        } catch (IOException e) {
-            return setErrorMessage(e.toString());
+        if (mCommandThread != null) {
+            return setOneJSONObject("connect", "true");
         }
+
+        if (mKeepAliveThread == null) {
+            mKeepAliveThread = new Thread(mKeepAliveRunnable);
+        }
+
+        mCommandThread = new Thread(mATCommandManager);
+        mCommandThread.start();
+        mKeepAliveThread.start();
 
         return setOneJSONObject("connect", "true");
     }
 
     private JSONObject quit() {
-        if (mDataSocket == null) {
+        if (mCommandThread == null) {
             return setOneJSONObject("status", "not connected");
         }
 
-        mQueue.add(new ATCommand(new QuitCommand()));
-        mDataSocket.close();
-        mDataSocket = null;
+        mCommandQueue.add(new ATCommand(new QuitCommand()));
+        mCommandThread.interrupt();
+        mCommandThread = null;
+        
+        if (mKeepAliveThread != null) {
+            mKeepAliveThread.interrupt();
+            mKeepAliveThread = null;
+        }
 
         return setOneJSONObject("quit", "true");
     }
 
     private JSONObject ftrim() {
-        if (mDataSocket == null) {
+        if (mCommandThread == null) {
             return setOneJSONObject("status", "not connected");
         }
 
-        mQueue.add(new ATCommand(new FtrimCommand()));
+        mCommandQueue.add(new ATCommand(new FtrimCommand()));
 
         return setOneJSONObject("ftrim", "true");
     }
 
     private JSONObject takeoff() {
-        if (mDataSocket == null) {
+        if (mCommandThread == null) {
             return setOneJSONObject("status", "not connected");
         }
 
-        mQueue.add(new ATCommand(new TakeoffCommand()));
+        mCommandQueue.add(new ATCommand(new TakeoffCommand()));
 
         return setOneJSONObject("takeoff", "true");
     }
 
     private JSONObject landing() {
-        if (mDataSocket == null) {
+        if (mCommandThread == null) {
             return setOneJSONObject("status", "not connected");
         }
 
-        mQueue.add(new ATCommand(new LandingCommand()));
+        mCommandQueue.add(new ATCommand(new LandingCommand()));
         
         return setOneJSONObject("landing", "true");
     }
 
     private JSONObject hover() {
-        if (mDataSocket == null) {
+        if (mCommandThread == null) {
             return setOneJSONObject("status", "not connected");
         }
 
-        mQueue.add(new ATCommand(new HoverCommand()));
+        mCommandQueue.add(new ATCommand(new HoverCommand()));
 
         return setOneJSONObject("hover", "true");
     }
 
     private JSONObject pitch_plus() {
-        if (mDataSocket == null) {
+        if (mCommandThread == null) {
             return setOneJSONObject("status", "not connected");
         }
 
-        mQueue.add(new ATCommand(new MoveCommand(false, 0.1f, 0f, 0f, 0f)));
+        mCommandQueue.add(new ATCommand(new MoveCommand(false, 0.5f, 0f, 0f, 0f)));
 
         return setOneJSONObject("pitch_plus", "true");
     }
 
     private JSONObject pitch_minus() {
-        if (mDataSocket == null) {
+        if (mCommandThread == null) {
             return setOneJSONObject("status", "not connected");
         }
 
-        mQueue.add(new ATCommand(new MoveCommand(false, -0.1f, 0f, 0f, 0f)));
+        mCommandQueue.add(new ATCommand(new MoveCommand(false, -0.5f, 0f, 0f, 0f)));
 
         return setOneJSONObject("pitch_minus", "true");
     }
 
     private JSONObject roll_plus() {
-        if (mDataSocket == null) {
+        if (mCommandThread == null) {
             return setOneJSONObject("status", "not connected");
         }
 
-        mQueue.add(new ATCommand(new MoveCommand(false, 0f, 0.1f, 0f, 0f)));
+        mCommandQueue.add(new ATCommand(new MoveCommand(false, 0f, 0.5f, 0f, 0f)));
 
         return setOneJSONObject("roll_plus", "true");
     }
 
     private JSONObject roll_minus() {
-        if (mDataSocket == null) {
+        if (mCommandThread == null) {
             return setOneJSONObject("status", "not connected");
         }
 
-        mQueue.add(new ATCommand(new MoveCommand(false, 0f, -0.1f, 0f, 0f)));
+        mCommandQueue.add(new ATCommand(new MoveCommand(false, 0f, -0.5f, 0f, 0f)));
 
         return setOneJSONObject("roll_minus", "true");
     }
 
     private JSONObject yaw_plus() {
-        if (mDataSocket == null) {
+        if (mCommandThread == null) {
             return setOneJSONObject("status", "not connected");
         }
 
-        mQueue.add(new ATCommand(new MoveCommand(false, 0f, 0f, 0f, 0.1f)));
+        mCommandQueue.add(new ATCommand(new MoveCommand(false, 0f, 0f, 0f, 0.5f)));
 
         return setOneJSONObject("yaw_plus", "true");
     }
 
     private JSONObject yaw_minus() {
-        if (mDataSocket == null) {
+        if (mCommandThread == null) {
             return setOneJSONObject("status", "not connected");
         }
 
-        mQueue.add(new ATCommand(new MoveCommand(false, 0f, 0f, 0f, -0.1f)));
+        mCommandQueue.add(new ATCommand(new MoveCommand(false, 0f, 0f, 0f, -0.5f)));
 
         return setOneJSONObject("yaw_minus", "true");
     }
@@ -234,12 +263,35 @@ public class ARDrone extends XWalkExtensionClient {
 
     @Override
     public void onResume() {
-        connect();
+        if (mKeepAliveThread != null) {
+            mKeepAliveRunnable.onResume();
+        }
+
+        if (mCommandThread != null) {
+            mATCommandManager.onResume();
+        }
     }
 
     @Override
     public void onPause() {
-        quit();
+        if (mKeepAliveThread != null) {
+            mKeepAliveRunnable.onPause();
+        }
+
+        if (mCommandThread != null) {
+            mATCommandManager.onPause();
+        }
+    }
+
+    @Override
+    public void onStop() {
+        if (mKeepAliveThread != null) {
+            mKeepAliveRunnable.onPause();
+        }
+
+        if (mCommandThread != null) {
+            mATCommandManager.onPause();
+        }
     }
 
     @Override

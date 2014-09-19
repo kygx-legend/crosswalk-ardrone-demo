@@ -274,7 +274,7 @@ class ComwdgCommand extends BaseCommand {
 
     @Override
     int getPriority() {
-        return PRIORITY_HIGH;
+        return PRIORITY_VERY_HIGH;
     }
 }
 
@@ -325,4 +325,3 @@ class MoveCommand extends PcwdCommand {
         mAngularSpeed = angularSpeed;
     }
 }
-
