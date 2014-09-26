@@ -117,6 +117,15 @@ exports.yaw_minus = function() {
 extension.setMessageListener(function(json) {
   var msg = JSON.parse(json);
 
+  if (msg.reply == 'videoStreaming') {
+    for (var id in g_listeners) {
+      if (g_listeners[id]['eventName'] === msg.eventName) {
+        g_listeners[id]['callback'](msg.data);
+      }
+    }
+    return;
+  }
+
   if (msg.data.error) {
     g_async_calls[msg.asyncCallId].reject(msg.data.error);
   } else {
@@ -125,6 +134,46 @@ extension.setMessageListener(function(json) {
 
   delete g_async_calls[msg.asyncCallId];
 });
+
+function _addEventListener(eventName, callback) {
+  if (typeof eventName !== 'string') {
+    console.log("Invalid parameters of eventName!");
+    return -1;
+  }
+
+  if (typeof callback !== 'function') {
+    console.log("Invalid parameters of callback!");
+    return -1;
+  }
+
+  if (typeof callback !== null && typeof callback !== 'function') {
+    console.log("Invalid parameters of callback!");
+    return -1;
+  }
+
+  var listener = {
+    'eventName': eventName,
+    'callback': callback
+  };
+
+  var listener_id = g_next_listener_id;
+  g_next_listener_id += 1;
+  g_listeners[listener_id] = listener;
+
+  if (g_listeners[listener_id] != null) {
+    var msg = {
+      'cmd': 'addEventListener',
+      'eventName': listener.eventName
+    };
+    extension.postMessage(JSON.stringify(msg));
+  }
+
+  return listener_id;
+}
+
+exports.addEventListener = function(eventName, callback) {
+  return _addEventListener(eventName, callback);
+};
 
 var _sendSyncMessage = function(msg) {
   return extension.internal.sendSyncMessage(JSON.stringify(msg));

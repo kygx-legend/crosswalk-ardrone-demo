@@ -3,7 +3,7 @@
 An Ardrone Demo based on Crosswalk External Extension.
 
 *   Use Android API 19.
-*   Use [Crosswalk For Android Canary 9.38.208.0](https://download.01.org/crosswalk/releases/crosswalk/android/canary/9.38.208.0/).
+*   Use [Crosswalk For Android Stable 7.36.154.13](https://download.01.org/crosswalk/releases/crosswalk/android/stable/7.36.154.13/crosswalk-7.36.154.13.zip)
 
 # Pre-requisites
 

@@ -11,8 +11,9 @@ if [ ! -f $EXTENSION_SRC/lib/crosswalk.zip ] ; then
   echo
   echo "********* DOWNLOADING CROSSWALK..."
   echo
-  wget https://download.01.org/crosswalk/releases/crosswalk/android/canary/9.38.208.0/crosswalk-9.38.208.0.zip
-  mv crosswalk-9.38.208.0.zip $EXTENSION_SRC/lib/crosswalk.zip
+  wget https://download.01.org/crosswalk/releases/crosswalk/android/beta/9.38.208.1/crosswalk-9.38.208.1.zip
+  mkdir -p $EXTENSION_SRC/lib
+  mv crosswalk-9.38.208.1.zip $EXTENSION_SRC/lib/crosswalk.zip
   cd $EXTENSION_SRC/lib
   unzip crosswalk.zip
   cd -

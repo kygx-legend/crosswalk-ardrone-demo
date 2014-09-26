@@ -13,7 +13,7 @@
   <property name="android-api-level" value="19" />
 
   <!-- Crosswalk Android version -->
-  <property name="crosswalk-version" value="9.38.208.0" />
+  <property name="crosswalk-version" value="9.38.208.1" />
 
   <!-- location of downloaded Crosswalk Android file -->
   <property name="crosswalk-zip" value="${lib}/crosswalk.zip" />
@@ -43,7 +43,7 @@
   <target name="download-crosswalk" depends="prepare, check-crosswalk-present"
           unless="crosswalk-zip.present">
     <!-- fetch from the download site -->
-    <get src="https://download.01.org/crosswalk/releases/crosswalk/android/canary/${crosswalk-version}/crosswalk-${crosswalk-version}.zip" dest="${crosswalk-zip}" />
+    <get src="https://download.01.org/crosswalk/releases/crosswalk/android/stable/${crosswalk-version}/crosswalk-${crosswalk-version}.zip" dest="${crosswalk-zip}" />
 
     <!-- unpack to lib/crosswalk-*/ -->
     <unzip src="${crosswalk-zip}" dest="${lib}" />

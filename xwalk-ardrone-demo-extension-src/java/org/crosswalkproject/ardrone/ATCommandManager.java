@@ -23,15 +23,13 @@ public class ATCommandManager extends RunnableWithLock {
     private InetAddress mInetAddress;
     private int mSequence;
 
-    public ATCommandManager(ATCommandQueue queue, String remoteAddress) {
+    public ATCommandManager(ATCommandQueue queue, InetAddress remoteAddress) {
         mCommandQueue = queue;
+        mInetAddress = remoteAddress;
         mSequence = 1;
         try {
             mDataSocket = new DatagramSocket();
-            mInetAddress = InetAddress.getByName(remoteAddress);
         } catch (SocketException e) {
-            Log.i(TAG, e.toString());
-        } catch (UnknownHostException e) {
             Log.i(TAG, e.toString());
         }
     }

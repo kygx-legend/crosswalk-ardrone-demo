@@ -9,8 +9,14 @@ import org.xwalk.app.runtime.extension.XWalkExtensionContextClient;
 
 import android.util.Log;
 
+import java.io.InputStream;
 import java.io.IOException;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -20,18 +26,29 @@ public class ARDrone extends XWalkExtensionClient {
 
     private ATCommandManager mATCommandManager;
     private ATCommandQueue mCommandQueue;
-    private String mLocalAddress;
+    private InetAddress mInetAddress;
+    private Socket mVideoSocket;
     private String mRemoteAddress;
     private RunnableWithLock mKeepAliveRunnable;
     private Thread mCommandThread;
     private Thread mKeepAliveThread;
+    private Thread mVideoStreamThread;
+    private Thread mParse2RawH264Thread;
+    private VideoStreamManager mVideoStreamRunnable;
+    private InputStream mInputStream;
+    private PipedInputStream mPipedInputStream;
+    private PipedOutputStream mPipedOutputStream;
 
     public ARDrone(String name, String jsApiContent, XWalkExtensionContextClient xwalkContext) {
         super(name, jsApiContent, xwalkContext);
-        mLocalAddress = "192.168.1.2";
         mRemoteAddress = "192.168.1.1";
+        try {
+            mInetAddress = InetAddress.getByName(mRemoteAddress);
+        } catch (UnknownHostException e) {
+            Log.i(TAG, e.toString());
+        }
         mCommandQueue = new ATCommandQueue(10);
-        mATCommandManager = new ATCommandManager(mCommandQueue, mRemoteAddress);
+        mATCommandManager = new ATCommandManager(mCommandQueue, mInetAddress);
         mKeepAliveRunnable = new RunnableWithLock() {
             @Override
             public void run() {
@@ -58,14 +75,19 @@ public class ARDrone extends XWalkExtensionClient {
         try {
             JSONObject jsonInput = new JSONObject(message);
             String cmd = jsonInput.getString("cmd");
-            String asyncCallId = jsonInput.getString("asyncCallId");
-            handle(instanceID, asyncCallId, cmd);
+            if (cmd.equals("addEventListener")) {
+                String eventName = jsonInput.getString("eventName");
+                handleAddEventListener(eventName);
+            } else {
+                String asyncCallId = jsonInput.getString("asyncCallId");
+                handleControlCommands(instanceID, asyncCallId, cmd);
+            }
         } catch (JSONException e) {
             printErrorMessage(e);
         }
     }
 
-    private void handle(int instanceID, String asyncCallId, String cmd) {
+    private void handleControlCommands(int instanceID, String asyncCallId, String cmd) {
         try {
             JSONObject jsonOutput = new JSONObject();
 
@@ -99,6 +121,40 @@ public class ARDrone extends XWalkExtensionClient {
             postMessage(instanceID, jsonOutput.toString());
         } catch (JSONException e) {
             printErrorMessage(e);
+        }
+    }
+
+    private void handleAddEventListener(String eventName) {
+        if (!eventName.equals("videostreaming")) {
+            return;
+        }
+
+        try {
+            mVideoSocket = new Socket(mInetAddress, VideoStreamManager.VIDEO_PORT);
+            mInputStream = mVideoSocket.getInputStream();
+            mPipedInputStream = new PipedInputStream(10 * 1024);
+            mPipedOutputStream = new PipedOutputStream(mPipedInputStream);
+            mParse2RawH264Thread = new Thread(new RunnableWithLock() {
+                @Override
+                public void run() {
+                    while (true) {
+                        try {
+                            int length = ParsePaVEHeader.parseHeader(mInputStream);
+                            byte[] bytes = ParsePaVEHeader.readPacket(mInputStream, length);
+                            mPipedOutputStream.write(bytes);
+                        } catch (IOException e) {
+                            Log.i(TAG, e.toString());
+                        }
+                        paused();
+                    }
+                }
+            });
+            mParse2RawH264Thread.start();
+            mVideoStreamRunnable = new VideoStreamManager(this, mPipedInputStream);
+            mVideoStreamThread = new Thread(mVideoStreamRunnable);
+            mVideoStreamThread.start();
+        } catch (IOException e) {
+            Log.i(TAG, e.toString());
         }
     }
 
@@ -281,6 +337,16 @@ public class ARDrone extends XWalkExtensionClient {
         if (mCommandThread != null) {
             mATCommandManager.onPause();
         }
+
+        if (mParse2RawH264Thread != null) {
+            mParse2RawH264Thread.interrupt();
+            mParse2RawH264Thread = null;
+        }
+
+        if (mVideoStreamThread != null) {
+            mVideoStreamThread.interrupt();
+            mVideoStreamThread = null;
+        }
     }
 
     @Override
@@ -291,6 +357,16 @@ public class ARDrone extends XWalkExtensionClient {
 
         if (mCommandThread != null) {
             mATCommandManager.onPause();
+        }
+
+        if (mParse2RawH264Thread != null) {
+            mParse2RawH264Thread.interrupt();
+            mParse2RawH264Thread = null;
+        }
+
+        if (mVideoStreamThread != null) {
+            mVideoStreamThread.interrupt();
+            mVideoStreamThread = null;
         }
     }
 
