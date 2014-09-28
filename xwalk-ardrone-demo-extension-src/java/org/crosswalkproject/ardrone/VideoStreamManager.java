@@ -121,7 +121,7 @@ public class VideoStreamManager implements Runnable {
                     try {
                         out.put("reply", "videoStreaming");
                         out.put("eventName", "videostreaming");
-                        out.put("data", picture.setPicture2JSONObject());
+                        out.put("data", picture.setPictureLocation());
                         mARDrone.broadcastMessage(out.toString());
                     } catch (JSONException e) {
                         Log.e(TAG, e.toString());

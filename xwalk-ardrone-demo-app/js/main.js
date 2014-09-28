@@ -101,21 +101,14 @@ window.onload = function() {
         onSuccess();
       }, Error);
     };
-    videoCanvas = document.getElementById("video");
-    videoContext = videoCanvas.getContext("2d");
     ardrone.addEventListener("videostreaming", function(image) {
-      var imageData = videoContext.getImageData(0, 0, videoCanvas.width, videoCanvas.height);
-      //var imageData = videoContext.createImageData(image.width, image.height);
-      //for (var i = 0; i < image.data.length; i++) {
-        //imageData[i] = image.data[i];
-      //}
-      imageData.data = image.data;
-      console.log(image.width);
-      console.log(image.height);
-      console.log(imageData.data);
-      //videoContext.drawImage(imageData, 0, 0);
-      videoContext.putImageData(imageData, 0, 0);
+      document.getElementById("video").src = "file://" + image.loc + "?" + Math.random();
     });
+    function update() {
+      document.getElementById("video").src = "file://" + image.loc + "?" + Math.random();
+      setTimeout("update()", 40);
+    }
+    update();
   } catch(e) {
     console.log(e);
   }
